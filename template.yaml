@@ -1,0 +1,366 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: OpenCV Mask RCNN running in an AWS Lambda Layer. This also creates an S3 bucket, API Gateway.
+
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+
+    ApiGatewayRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: opencv-lambda-mask-image-api
+        Description: An API Gateway with a Lambda Integration for OpenCV Object Detection Demo
+        FailOnWarnings: true
+        EndpointConfiguration:
+          Types:
+            - REGIONAL
+
+    ApiGatewayResource:
+        Type: AWS::ApiGateway::Resource
+        Properties:
+          ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+          PathPart: 'OpenCVMaskFunction'
+          RestApiId: !Ref ApiGatewayRestApi
+
+    ApiGatewayIamRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: ''
+              Effect: 'Allow'
+              Principal:
+                Service:
+                  - 'apigateway.amazonaws.com'
+              Action:
+                - 'sts:AssumeRole'
+        Path: '/'
+        Policies:
+          - PolicyName: LambdaAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action: 'lambda:*'
+                  Resource: !GetAtt OpenCVMaskLambda.Arn
+
+    ApiGatewayMethodPOST:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        RestApiId: !Ref ApiGatewayRestApi
+        ResourceId: !Ref ApiGatewayResource
+        HttpMethod: ANY
+        AuthorizationType: NONE
+        ApiKeyRequired: false
+        Integration:
+          Type: AWS
+          IntegrationHttpMethod: POST
+          Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenCVMaskLambda.Arn}/invocations'
+          IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+          RequestTemplates:
+            application/json: '{"statusCode": 200}'
+        RequestParameters:
+          method.request.querystring.name: false
+        MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: false
+              method.response.header.Access-Control-Allow-Methods: false
+              method.response.header.Access-Control-Allow-Origin: false
+
+    ApiGatewayStage:
+      Type: AWS::ApiGateway::Stage
+      Properties:
+        DeploymentId: !Ref ApiGatewayDeployment
+        Description: Lambda API Stage Demo
+        RestApiId: !Ref ApiGatewayRestApi
+        StageName: 'Demo'
+
+    ApiGatewayDeployment:
+      Type: AWS::ApiGateway::Deployment
+      DependsOn: ApiGatewayMethodPOST
+      Properties:
+        Description: Lambda API Deployment
+        RestApiId: !Ref ApiGatewayRestApi
+
+    Permission:
+      Type: 'AWS::Lambda::Permission'
+      DependsOn: ApiGatewayStage
+      Properties:
+        FunctionName:
+          'Fn::GetAtt':
+            - OpenCVMaskLambda
+            - Arn
+        Action: 'lambda:InvokeFunction'
+        Principal: apigateway.amazonaws.com
+        SourceArn:
+          'Fn::Join':
+            - ''
+            - - 'arn:aws:execute-api:'
+              - Ref: 'AWS::Region'
+              - ':'
+              - Ref: 'AWS::AccountId'
+              - ':'
+              - Ref: ApiGatewayRestApi
+              - /*
+
+    MaskRCNNModelLayer:
+      Type: AWS::Lambda::LayerVersion
+      DependsOn: CopyZipsMaskInvoke
+      Properties:
+        CompatibleRuntimes:
+          - python3.7
+          - python3.8
+        Content:
+          S3Bucket: !Ref MaskBucket
+          S3Key: lambda-layer-zip/mask-rcnn.zip
+        Description: OpenCV Mask RCNN Model Layer
+        LayerName: opencv-mask-model-layer
+
+    OpenCVSourceLayer:
+      Type: AWS::Lambda::LayerVersion
+      DependsOn: CopyZipsMaskInvoke
+      Properties:
+        CompatibleRuntimes:
+          - python3.7
+          - python3.8
+        Content:
+            S3Bucket: !Ref MaskBucket
+            S3Key: lambda-layer-zip/opencv-python3-7-6.zip
+        Description: OpenCV Mask Source Layer
+        LayerName: opencv-mask-source-layer
+
+    OpenCVMaskLambda:
+      Type: AWS::Lambda::Function
+      DependsOn: CopyZipsMaskInvoke
+      Properties:
+        Code:
+          S3Bucket: !Ref MaskBucket
+          S3Key: opencv-lambda-demo/Lambda_Function_Python.zip
+        Description: OpenCV Mask Image Lambda
+        Environment:
+          Variables:
+            PYTHONPATH: /opt/
+        FunctionName: OpenCVMaskFunction
+        Handler: lambda_function.lambda_handler
+        Layers:
+          - !Ref OpenCVSourceLayer
+          - !Ref MaskRCNNModelLayer
+        MemorySize: 3008
+        Runtime: python3.7
+        Timeout: 900
+        Role:
+          Fn::GetAtt:
+            - LambdaRole
+            - Arn
+
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName:
+          Fn::Sub: lambda-role-opencv-mask-rcnn
+        AssumeRolePolicyDocument:
+          Statement:
+            - Action:
+              - sts:AssumeRole
+              Effect: Allow
+              Principal:
+                Service:
+                - lambda.amazonaws.com
+          Version: 2012-10-17
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AWSLambdaExecute
+          - arn:aws:iam::aws:policy/AmazonS3FullAccess
+          - arn:aws:iam::aws:policy/AmazonRekognitionFullAccess
+        Path: /
+
+    CopyZipsLambda:
+      Type: AWS::Lambda::Function
+      Properties:
+        Description: Copies objects from a source S3 bucket to a destination
+        FunctionName: OpenCVMaskInitFileCopier
+        Handler: index.handler
+        Runtime: python3.7
+        Role: !GetAtt LambdaRole.Arn
+        Timeout: 240
+        Code:
+          ZipFile: |
+            import json
+            import logging
+            import threading
+            import boto3
+            import cfnresponse
+            def copy_objects(source_bucket, dest_bucket, prefix, objects):
+                s3 = boto3.client('s3')
+                for o in objects:
+                    key = prefix + o
+                    copy_source = {
+                        'Bucket': source_bucket,
+                        'Key': key
+                    }
+                    print('copy_source: %s' % copy_source)
+                    print('dest_bucket = %s'%dest_bucket)
+                    print('key = %s' %key)
+                    s3.copy_object(CopySource=copy_source, Bucket=dest_bucket,
+                          Key=key)
+                    s3.put_object_acl(ACL = "public-read", Bucket=dest_bucket, Key = key)
+            def delete_objects(bucket, prefix, objects):
+                s3 = boto3.client('s3')
+                objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+                s3.delete_objects(Bucket=bucket, Delete=objects)
+            def timeout(event, context):
+                logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+            def handler(event, context):
+                # make sure we send a failure to CloudFormation if the function
+                # is going to timeout
+                timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+                timer.start()
+                print('Received event: %s' % json.dumps(event))
+                status = cfnresponse.SUCCESS
+                try:
+                    source_bucket = event['ResourceProperties']['SourceBucket']
+                    dest_bucket = event['ResourceProperties']['DestBucket']
+                    prefix = event['ResourceProperties']['Prefix']
+                    objects = event['ResourceProperties']['Objects']
+                    if event['RequestType'] == 'Delete':
+                        delete_objects(dest_bucket, prefix, objects)
+                    else:
+                        copy_objects(source_bucket, dest_bucket, prefix, objects)
+                except Exception as e:
+                    logging.error('Exception: %s' % e, exc_info=True)
+                    status = cfnresponse.FAILED
+                finally:
+                    timer.cancel()
+                    cfnresponse.send(event, context, status, {}, None)
+
+    S3ApiEndPointLambda:
+      Type: AWS::Lambda::Function
+      Properties:
+        FunctionName: OpenCVMaskInitCreateApiGatewayURLFile
+        Code:
+          ZipFile: |
+            import boto3
+            import os
+            import cfnresponse
+            import logging
+            import threading
+            import json
+
+            def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+            def lambda_handler(event, context):
+              status = cfnresponse.SUCCESS
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              apiString = os.getenv('ApiEndpoint')
+              bodyString = f"var appVariables = {{apiEndpoint: '{apiString}'}};"
+              try:
+                aBucket = os.getenv('Bucket')
+                client = boto3.client('s3')
+
+                if event['RequestType'] == 'Delete':
+                  client.delete_object(Bucket=aBucket, Key='demo-ui-config.js')
+                else:
+                  client.put_object(Body=bodyString, Bucket=aBucket, Key='demo-ui-config.js')
+                  client.put_object_acl(ACL = "public-read", Bucket = aBucket, Key = 'demo-ui-config.js')
+              except Exception as e:
+                logging.error('Exception: %s' % e, exc_info=True)
+                status = cfnresponse.FAILED
+              finally:
+                timer.cancel()
+                cfnresponse.send(event, context, status, {})
+              return True
+
+        Environment:
+          Variables:
+            ApiEndpoint: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiGatewayStage}/${OpenCVMaskLambda}'
+            Bucket: !Ref MaskBucket
+        Runtime: python3.7
+        Handler: index.lambda_handler
+        Role:
+          Fn::GetAtt:
+            - LambdaRole
+            - Arn
+      DependsOn:
+        - ApiGatewayStage
+        - MaskBucket
+
+    CopyZipsMaskInvoke:
+      Type: AWS::CloudFormation::CustomResource
+      DependsOn:
+        - CopyZipsLambda
+        - MaskBucket
+      Version: "1.0"
+      Properties:
+        ServiceToken: !GetAtt CopyZipsLambda.Arn
+        DestBucket: !Ref MaskBucket
+        SourceBucket: mask-rcnn-source
+        Prefix: ''
+        Objects:
+            - opencv-lambda-demo/Lambda_Function_Python.zip
+            - lambda-layer-zip/mask-rcnn.zip
+            - lambda-layer-zip/opencv-python3-7-6.zip
+            - index.html
+            - style.css
+            - images/cat.jpg
+            - images/dog.jpg
+            - images/face.jpg
+            - images/puppies.jpg
+            - images/spinner.gif
+
+    PrimerInvoke:
+      Type: AWS::CloudFormation::CustomResource
+      DependsOn: S3ApiEndPointLambda
+      Version: "1.0"
+      Properties:
+        ServiceToken: !GetAtt S3ApiEndPointLambda.Arn
+
+    MaskBucket:
+      Type: 'AWS::S3::Bucket'
+      Properties:
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+        AccessControl: PublicRead
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        BucketName: !Join
+          - "-"
+          - - "mask-rcnn-demo"
+            - !Select
+              - 0
+              - !Split
+                - "-"
+                - !Select
+                  - 2
+                  - !Split
+                    - "/"
+                    - !Ref "AWS::StackId"
+
+Outputs:
+
+  BucketName:
+    Value: !Ref MaskBucket
+
+  Endpoint:
+    Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiGatewayStage}'
