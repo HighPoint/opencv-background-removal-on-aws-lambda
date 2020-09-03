@@ -1,0 +1,91 @@
+0: Unlabeled
+1: Person
+2: Bicycle
+3: Car
+4: Motorcycle
+5: Airplane
+6: Bus
+7: Train
+8: Truck
+9: Boat
+10: Traffic light
+11: Fire hydrant
+12: Street sign
+13: Stop sign
+14: Parking meter
+15: Bench
+16: Bird
+17: Cat
+18: Dog
+19: Horse
+20: Sheep
+21: Cow
+22: Elephant
+23: Bear
+24: Zebra
+25: Giraffe
+26: Hat
+27: Backpack
+28: Umbrella
+29: Shoe
+30: Eye glasses
+31: Handbag
+32: Tie
+33: Suitcase
+34: Frisbee
+35: Skis
+36: Snowboard
+37: Sports ball
+38: Kite
+39: Baseball bat
+40: Baseball glove
+41: Skateboard
+42: Surfboard
+43: Tennis racket
+44: Bottle
+45: Plate
+46: Wine glass
+47: Cup
+48: Fork
+49: Knife
+50: Spoon
+51: Bowl
+52: Banana
+53: Apple
+54: Sandwich
+55: Orange
+56: Broccoli
+57: Carrot
+58: Hot dog
+59: Pizza
+60: Donut
+61: Cake
+62: Chair
+63: Couch
+64: Potted plant
+65: Bed
+66: Mirror
+67: Dining table
+68: Window
+69: Desk
+70: Toilet
+71: Door
+72: TV
+73: Laptop
+74: Mouse
+75: Remote
+76: Keyboard
+77: Cell phone
+78: Microwave
+79: Oven
+80: Toaster
+81: Sink
+82: Refrigerator
+83: Blender
+84: Book
+85: Clock
+86: Vase
+87: Scissors
+88: Teddy bear
+89: Hair drier
+90: Toothbrush
