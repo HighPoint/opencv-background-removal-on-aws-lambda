@@ -1,1 +1,2 @@
-# opencv-background-removal-on-aws-lambda
+# OpenCV Background Removal On AWS Lambda
+
