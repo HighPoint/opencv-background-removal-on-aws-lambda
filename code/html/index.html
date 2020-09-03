@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div class="aligncenter">
+        <h2>Mask RCNN on AWS Lambda</h2>
+    </div>
+
+    <!-- The grid: four columns -->
+    <div class="row">
+      <div class="column">
+        <img src="/images/face.jpg" alt="/images/face.jpg" class="galleryImage">
+      </div>
+      <div class="column">
+        <img src="/images/dog.jpg" alt="/images/dog.jpg" class="galleryImage">
+      </div>
+      <div class="column">
+        <img src="/images/puppies.jpg" alt="/images/puppies.jpg" class="galleryImage">
+      </div>
+      <div class="column">
+        <img src="/images/cat.jpg" alt="/images/cat.jpg" class="galleryImage">
+      </div>
+    </div>
+
+    <table class="firstTable">
+      <tr>
+        <th class="columnSettings">
+         <div class="dropContainer">
+            <img id="inputViewer" class= "inputImageViewer" hidden>
+            <p id="dragOverText" class="normalText" hidden>Drop your .jpg file here</p>
+            <p id="helperText" class="normalText">Click an image above<br>
+              or select here to add your own image</p>
+          </div>
+        </th>
+        <th class="columnSettings">
+          <table class="tableHover" width="100%">
+            <tbody>
+              <tr class="accordionRow">
+                <td>
+                  <div>Object Mask Options
+                  </div>
+                </td>
+              </tr>
+              <tr class="accordion">
+                <td >
+                  <div class="accordionContent">
+                    <label class="checkboxContainer">Faster R-CNN Object Detection
+                      <input type="checkbox" id="detectObjectCheckmark" checked="checked"/>
+                      <span class="checkmark"></span>
+                    </label>
+                    <label class="checkboxContainer">AWS Rekognition Object Detection
+                      <input type="checkbox" id="awsRekognitionCheckmark"/>
+                      <span class="checkmark"></span>
+                    </label>
+                    <lable class="information" id="objectDetectionInfo">ⓘ Object Detection Information
+                    </label>
+                  </div>
+                </td>
+              </tr>
+              <tr class="accordionRow">
+                <td>
+                  <div>
+                    Output Visualization Options
+                  </div>
+                </td>
+              </tr>
+              <tr class="accordion">
+                <td >
+                  <div class="accordionContent">
+                    <label class="checkboxContainer">Show Object Detection Label
+                      <input type="checkbox" id="showLabelCheckmark" checked="checked"/>
+                      <span class="checkmark"></span>
+                    </label>
+                    <label class="checkboxContainer">Show Object Detection Confidence Level
+                      <input type="checkbox" id="showConfidenceCheckmark" checked="checked"/>
+                      <span class="checkmark"></span>
+                    </label>
+                    <label for="confidenceLevelText">Confidence Level
+                      <input class="confidenceText" type="number" id="confidenceLevelText" value="70" min="50" max="90" size="3"/>
+                    </label>
+                  </div>
+                </td>
+              </tr>
+              <tr class="sendButton">
+                <td border=2px color=black>
+                  <div>
+                    Detect
+                  <div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </th>
+        <th class="columnSettings">
+          <div>
+            <img src="/images/spinner.gif" class="spinnerImage">
+            <img id="responseImage">
+          </div>
+        </th>
+      </tr>
+    </table>
+
+    <div id="hiddenCanvas" hidden>
+      <canvas id="originalCanvas" width="2000" height="1300"></canvas>
+    </div>
+
+    <canvas id="exampleCanvas" width="2000" height="1300"></canvas>
+    <div id="status"></div>
+    <input id="clearDrawButton" type="button" value="Clear">
+
+
+    <div class="modalView">
+      <div class="modalContent">
+        <span class="closeModal">&times;</span>
+        <p class="modalHeading">Modal Heading</p>
+        <p class="modalText">Some text in the Modal..</p>
+      </div>
+    </div>
+
+    <input type="file" name="fileUpload" id="fileUpload" hidden/>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script type="text/javascript" src="demo-ui-config.js"></script>
+    <script>
+      var globalDataString = null;
+      var clicking = false;
+      var isClearButton = true;
+
+      $(document).ready(
+        function(){
+          console.log("In document ready");
+          $(".spinnerImage").hide();
+          $(".spinnerImage").attr("width", getWidthResizer());
+          $(".dropContainer").css("cursor","pointer");
+
+          var accordionVar = $(this).next(".accordion");
+          accordionVar.find(".accordionContent").slideUp("slow", function() {
+            if (!$(this).is(":visible")) {
+              accordionVar.hide();
+            }
+          });
+        }
+      );
+
+      $(window).on("click", function(e){
+        if (e.target.className == "modalView") {
+          $(".modalView").attr("style", "display:none");
+        }
+      });
+
+      $("#haarCascadeInfo").on("click", function(e){
+
+        $(".modalHeading").text("Haar Cascade");
+        $(".modalText").text("Haar Cascades trade accuracy for speed. These examples show Haar Cascades are less accurate than OpenCV DNN object detection or AWS Rekognition. The cascades work best if you already know the type of object in the image. The human face and cat face cascades come standard with OpenCV. The dog face cascade is from github.com/metinozkan. Many Thanks!");
+        $(".modalView").attr("style", "display:block");
+      });
+
+      $("#objectDetectionInfo").on("click", function(e){
+
+        $(".modalHeading").text("Object Detection");
+        $(".modalText").text("OpenCV provides a Deep Neural Network (DNN) for object detection. It supports models in Caffe, Darknet, Torch, and TensorFlow. This demo runs serverlessly on AWS Lambda. The Lambda function contains two AWS Lambda Layers, one for OpenCV and a second for the TensorFlow Model. This example uses Faster_RCNN_Inception_v2 as the model. You can also directly compare results between OpenCV and AWS Rekognition. AWS Rekognition is superior in many cases, but costs $0.01 per 10 calls beyond the AWS free tier. Sample images are courtesy of Pexels.com.");
+        $(".modalView").attr("style", "display:block");
+      });
+
+      $(".closeModal").on("click", function(e){
+        $(".modalView").attr("style", "display:none");
+      });
+
+      $("#confidenceLevelText").on("change", function(e)
+        {
+        var confidenceValue = parseInt($("#confidenceLevelText").val());
+
+        if(isNaN(confidenceValue))
+        {
+          $("#confidenceLevelText").val(70);
+        }
+
+        if (confidenceValue < 50)
+          $('#confidenceLevelText').val(50);
+
+        if (confidenceValue > 90)
+          $('#confidenceLevelText').val(90);
+        });
+
+      $("html").on("dragover", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        });
+
+      $("html").on("drop", function(e) {
+        e.preventDefault();
+         e.stopPropagation();
+       });
+
+      $(".dropContainer,.normalText,.inputImageViewer").on("dragenter", function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+          $("#helperText").hide();
+          $("#inputViewer").hide();
+          $("#dragOverText").show();
+      });
+
+      $(".dropContainer").on("dragleave", function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      });
+
+      $(".dropContainer,.normalText,.inputImageViewer").on("click",function(e){
+          e.stopPropagation();
+          e.preventDefault();
+
+          $("#fileUpload").trigger("click");
+      });
+
+      $(".dropContainer,.normalText,.inputImageViewer").on("drop", function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        var selectedFile = e.originalEvent.dataTransfer.files;
+        var fd = new FormData();
+        fd.append("file", selectedFile[0]);
+
+        if (selectedFile.length > 0) {
+          var imageFile = selectedFile[0];
+          if (imageFile.name.includes(".jpg") || imageFile.name.includes(".jpeg") ||
+              imageFile.name.includes(".JPG") || imageFile.name.includes(".JPEG"))
+          {
+            var reader = new FileReader();
+            reader.onload = function(fileLoadedEvent) {
+              globalDataString = fileLoadedEvent.target.result;
+
+              $("#inputViewer").attr("src", fileLoadedEvent.target.result);
+              $("#inputViewer").attr("width", getWidthResizer());
+
+
+              $("#inputViewer").show();
+              $("#helperText").hide();
+              $("#dragOverText").hide();
+
+              uploadToLambda(globalDataString);
+              }
+
+              reader.readAsDataURL(imageFile);
+            }
+            else{
+              alert("The file must be a .jpg or .jpeg");
+            }
+          }
+      });
+
+      $(".accordionRow").on("click",function() {
+          var accordionVar = $(this).next(".accordion");
+          if (!accordionVar.is(":visible")) {
+            accordionVar.show().find(".accordionContent").slideDown("slow");
+          } else {
+            accordionVar.find(".accordionContent").slideUp("slow", function() {
+              if (!$(this).is(":visible")) {
+                accordionVar.hide();
+              }
+            });
+          }
+        });
+
+        $(".sendButton").on("click", function(){
+
+          if(globalDataString != null)
+          {
+            uploadToLambda(globalDataString);
+          }
+          else {
+            alert("Please select a file first.");
+          }
+        });
+
+        $(".galleryImage").on("click", function(){
+
+          var inputFileName = $(this).attr("alt");
+
+          globalDataString = openServerFileName(inputFileName);
+
+          $("#inputViewer").attr("src", $(this).attr("src"));
+          $("#inputViewer").attr("width", getWidthResizer());
+
+          $("#helperText").hide();
+          $("#dragOverText").hide();
+          $("#inputViewer").show();
+
+          loadHiddenCanvas($(this).attr("src"));
+        });
+
+        $("#fileUpload").on("change", function () {
+          fileLength = $("#fileUpload").get(0).files.length;
+
+          if( fileLength!= 0 && findFileSize(this.files[0]) <= 5000000)
+          {
+            var reader = new FileReader();
+            reader.onload = function(fileLoadedEvent){
+              globalDataString = fileLoadedEvent.target.result;
+
+              $("#inputViewer").attr("src", globalDataString);
+              $("#inputViewer").attr("width", getWidthResizer());
+
+              $("#inputViewer").show();
+              $("#helperText").hide();
+              $("#dragOverText").hide();
+
+              uploadToLambda(globalDataString);
+
+              document.getElementById("fileUpload").value = null;
+            };
+            reader.readAsDataURL(this.files[0]);
+          }
+          else {
+            if( fileLength==0)
+              alert("No file uploaded");
+            else {
+              alert("The maximum size of a file is 5MB")
+            }
+          }
+        });
+
+      function openServerFileName(aFileName){
+        fetch(aFileName)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+
+          return response.blob();
+        })
+          .then(myBlob => {
+            var reader = new FileReader();
+            reader.onload = function(){
+              globalDataString = reader.result;
+              uploadToLambda(globalDataString);
+            };
+
+            reader.readAsDataURL(myBlob);
+        })
+        .catch(error => {
+          console.error("There has been a problem with your fetch operation:", error);
+        });
+      }
+
+      function getWidthResizer(){
+        return Math.floor($(window).width()/3 - 2).toString();
+      }
+
+      function uploadToLambda(aBlob){
+        $("#responseImage").hide();
+        $(".spinnerImage").show();
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", appVariables.apiEndpoint, true);
+        xhr.setRequestHeader("Content-Type", "image/jpeg");
+
+        xhr.upload.onprogress = function(e) {
+          if (e.lengthComputable) {
+            var percentComplete = (e.loaded / e.total) * 100;
+            console.log(percentComplete + "% uploaded");
+          }
+        };
+          xhr.onload = function() {
+           if (this.status == 200) {
+
+            var JSONobject = JSON.parse(this.response);
+            var dataString = "data:image/png;base64," + JSONobject.body;
+
+            console.log("dataString:", dataString);
+
+            $("#responseImage").attr("src", dataString);
+            $("#responseImage").attr("width", getWidthResizer());
+
+            $(".spinnerImage").hide();
+            $("#responseImage").show();
+
+            // set the image source (can be any url - I used data URI to keep demo self contained)
+        //    canvasImage.src = dataString;
+            loadCanvasImage(dataString);
+          };
+        };
+
+          var dataURLString = aBlob;
+          var dataURL = dataURLString.replace(/^data:image\/[a-z]+;base64,/, "");
+          console.log("dataURL = " + dataURL);
+
+          var detectObjectChecked = $("#detectObjectCheckmark").prop("checked");
+          var awsRekognitionChecked = $("#awsRekognitionCheckmark").prop("checked");
+          var showLabelChecked = $("#showLabelCheckmark").prop("checked");
+          var showConfidenceChecked = $("#showConfidenceCheckmark").prop("checked");
+          var confidenceLevel = parseInt($("#confidenceLevelText").val());
+
+          var optionURL = JSON.stringify({"imageData":dataURL,
+                                          "detectObject":detectObjectChecked,
+                                          "awsRekognition":awsRekognitionChecked,
+                                          "showLabel":showLabelChecked,
+                                          "showConfidence":showConfidenceChecked,
+                                          "confidenceLevel":confidenceLevel
+                                        });
+          xhr.send(optionURL);
+      }
+
+      function findFileSize(file) {
+          try{
+              return file.size;
+          }
+          catch(e){
+            var objFSO = new ActiveXObject("Scripting.FileSystemObject");
+            var e = objFSO.getFile( fileInput.value);
+            var fileSize = e.size;
+            return fileSize;
+          }
+      }
+
+
+      $("#clearDrawButton").on("click", function(){
+        if(isClearButton){
+          $("#clearDrawButton").prop("value", "Draw");
+          isClearButton = false;
+        }
+        else{
+          $("#clearDrawButton").prop("value", "Clear");
+          isClearButton = true;
+        }
+      });
+
+      $('#exampleCanvas').mousemove(function(e) {
+        if(clicking == false)
+        {
+          var pos = findPos(this);
+          var x = e.pageX - pos.x;
+          var y = e.pageY - pos.y;
+          var coord = "x=" + x + ", y=" + y;
+          var c = this.getContext('2d');
+          var p = c.getImageData(x, y, 1, 1).data;
+          var rgba = "r = "+p[0]+", g = "+p[1]+", b = "+p[2]+", a = "+p[3];
+          $('#status').html(coord + "<br>" + rgba);
+        }
+        else if(isClearButton == true)
+        {
+          var pos = findPos(this);
+          var x = e.pageX - pos.x;
+          var y = e.pageY - pos.y;
+          var coord = "x=" + x + ", y=" + y;
+          var ctx = this.getContext('2d');
+          ctx.fillStyle = "rgba(255,0,0,0)";
+          ctx.fillRect(0,0,10,10);
+          var imgData = ctx.getImageData(0, 0, 10, 10);
+          ctx.putImageData(imgData, x, y);
+          var p = c.getImageData(x, y, 1, 1).data;
+          var rgba = "r = "+p[0]+", g = "+p[1]+", b = "+p[2]+", a = "+p[3];
+          $('#status').html(coord + "<br>" + rgba);
+        }
+        else {
+          var pos = findPos(this);
+          var x = e.pageX - pos.x;
+          var y = e.pageY - pos.y;
+          var coord = "x=" + x + ", y=" + y;
+          var aCanvas = $("#originalCanvas")[0];
+          var originalCTX = aCanvas.getContext('2d');
+          var ctx = this.getContext('2d');
+//          ctx.fillStyle = "rgba(255,0,0,0)";
+//          ctx.fillRect(0,0,10,10);
+          var imgData = originalCTX.getImageData(x, y, 10, 10);
+          ctx.putImageData(imgData, x, y);
+          var p = c.getImageData(x, y, 1, 1).data;
+          var rgba = "r = "+p[0]+", g = "+p[1]+", b = "+p[2]+", a = "+p[3];
+          $('#status').html(coord + "<br>" + rgba);
+        }
+      });
+
+      $('#exampleCanvas').mousedown(function(e) {
+        clicking = true;
+      });
+
+      $(document).mouseup(function(e){
+        clicking = false;
+      });
+
+
+      function findPos(obj) {
+          var curleft = 0, curtop = 0;
+          if (obj.offsetParent) {
+              do {
+                  curleft += obj.offsetLeft;
+                  curtop += obj.offsetTop;
+              } while (obj = obj.offsetParent);
+              return { x: curleft, y: curtop };
+          }
+          return undefined;
+      }
+
+      function loadHiddenCanvas(anImageSource)
+      {
+        var aCanvas = $("#originalCanvas")[0];
+        var aContext = aCanvas.getContext('2d');
+
+        var hiddenImage = new Image();
+
+        hiddenImage.onload = function(){
+          aContext.drawImage(hiddenImage, 0, 0);
+        }
+
+        hiddenImage.src = anImageSource;
+      }
+
+      function loadCanvasImage(aDataString){
+
+        var canvas = $("#exampleCanvas")[0];
+        var context = canvas.getContext('2d');
+        var canvasImage = new Image();
+
+        canvasImage.onload = function() {
+          context.drawImage(canvasImage, 0, 0);
+          alert("Canvas change");
+        }
+
+        canvasImage.src = aDataString;
+      }
+
+
+
+    </script>
+  </body>
+</html>
