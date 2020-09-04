@@ -146,7 +146,7 @@ Resources:
       Properties:
         Code:
           S3Bucket: !Ref MaskBucket
-          S3Key: opencv-lambda-demo/Lambda_Function_Python.zip
+          S3Key: mask-rcnn-code-zip/Lambda_Function_Python.zip
         Description: OpenCV Mask Image Lambda
         Environment:
           Variables:
@@ -310,7 +310,7 @@ Resources:
         SourceBucket: mask-rcnn-source
         Prefix: ''
         Objects:
-            - opencv-lambda-demo/Lambda_Function_Python.zip
+            - mask-rcnn-code-zip/Lambda_Function_Python.zip
             - lambda-layer-zip/mask-rcnn.zip
             - lambda-layer-zip/opencv-python3-7-6.zip
             - index.html
