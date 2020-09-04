@@ -6,7 +6,7 @@ Serverless removal of images backgrounds with OpenCV, using an AWS Lambda.
 
 1. Click the "OpenCV Object Detection Launch Stack" button:
 
-[![OpenCV Background Removal Launch Stack](readme-images/ImageBackgroundRemovalLaunchStack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=OpenCVObjectDetectionStack&templateURL=https://opencv-source.s3.amazonaws.com/template.yaml)
+[![OpenCV Background Removal Launch Stack](readme-images/ImageBackgroundRemovalLaunchStack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=OpenCVObjectDetectionStack&templateURL=https://mask-rcnn-source.s3.amazonaws.com/template.yaml)
 
 
 This will bring you to either the Cloudformation UI or the AWS console if you are not signed in. Sign in, if you are not already. From the Cloudformation UI, click "Next" at the bottom of the screen. Repeat clicking "Next" on the two following pages. You will reach a page with this towards the bottom:
