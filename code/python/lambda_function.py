@@ -55,10 +55,8 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
 
   i = 0
   clone = np.zeros((H, W, 4))
-#  clone[0:int(H/2), 0:int(W/2), 3].fill(255)
 
   clone[:,:,0:3] = image.copy()
-#  clone[:,:, 3].fill(10)
 
   for detection in boxes[0,0,:,:]:
     i += 1
@@ -74,7 +72,7 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
       boxH = endY - startY
 
       mask = masks[i -1, classID]
-      mask = cv.resize(mask, (boxW, boxH), interpolation=cv.INTER_NEAREST)
+      mask = cv.resize(mask, (boxW, boxH), interpolation=cv.INTER_LANCZOS4) #cv.INTER_CUBIC
 #      mask = (mask > 0.3) #Threshold
 
       print(f"Mask = {mask.shape}")
@@ -85,7 +83,9 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
 
 #      visMask = (mask * 255).astype("uint8")
 
-      visMask = getEdgeMask(image, mask, startX, startY, endX, endY)
+      visMask = getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY)
+      visMask = np.where((visMask==2)|(visMask==0),0,255).astype('uint8')
+
 #      instance = cv.bitwise_and(roi, roi, mask=visMask)
 
 #      roi = roi[mask]
@@ -94,25 +94,184 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
 #      blended = ((0.0 * color) + (1.0 * roi)).astype("uint8")
 
 #      clone[startY:endY, startX:endX][mask] = blended
-      clone[startY:endY, startX:endX, 3] = visMask
+
+      clone[startY:endY, startX:endX, 3] = np.where((visMask == 255) | (clone[startY:endY, startX:endX, 3]==255), 255, 0).astype('uint8')
 
       print(clone.shape)
 
-#      hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
-#      Hue, Sat, Val = cv.split(hsv)
+  clone = smoothImageEdges(clone)
 
   return clone
+
+def smoothImageEdges(image):
+
+  kernel = kernel = np.ones((9,9),np.uint8)
+  closing = cv.morphologyEx(image[:,:,3], cv.MORPH_CLOSE, kernel)
+
+  image[:,:,3] = closing.astype("int")
+
+#  getDistribution(closing.astype("int"), "Morph Closing")
+
+  blur = cv.GaussianBlur( image[:,:,3],(9,9),0)
+
+  image[:,:,3] = blur.astype("int")
+
+  return image
+
+
+def getGrabCutMaskWholeImage(image, mask, startX, startY, endX, endY):
+
+  mask2 = np.zeros(mask.shape[:2], dtype="uint8")
+  mask3 = np.zeros(image.shape[:2], dtype="uint8")
+
+  mask2[mask < 0.15] = 0
+  mask2[mask >= 0.15] = 2
+  mask2[mask >= 0.5] = 3
+  mask2[mask >= 0.85] = 1
+
+  getDistribution(mask2, "mask2 2")
+
+  mask3[startY:endY, startX:endX] = mask2
+
+  fgModel = np.zeros((1, 65), dtype="float")
+  bgModel = np.zeros((1, 65), dtype="float")
+
+  rect = (startX, endY, endX, startY)
+
+  cloneRegion = image[startY:endY, startX:endX, 0:3].copy()
+
+  print(f"mask2 = {mask2.shape}")
+  print(f"cloneRegion = {cloneRegion.shape}")
+
+  print(f"startX = {startX}, startY = {startY}, endX = {endX}, endY = {endY}")
+
+  # beginning if grabcut rectangle
+
+  #rect = (startY,startX,endY,endX)
+  #(mask3, bgModel, fgModel) = cv.grabCut(image, mask3, rect, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_RECT)
+  #visMask = mask4[startY:endY, startX:endX].copy()
+
+  # end - if grabcut rectangle
+
+#  (mask3, bgModel, fgModel) = cv.grabCut(cloneRegion, mask2, None, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_MASK)
+
+  rect = (startY,startX,endY,endX)
+  (mask3, bgModel, fgModel) = cv.grabCut(image, mask3, rect, bgModel, fgModel, 10, mode=cv.GC_INIT_WITH_MASK)
+
+  mask2 = mask3[startY:endY, startX:endX]
+
+  getDistribution(mask3, "mask3")
+  getDistribution(mask2, "mask2")
+
+  return mask2
+
+def getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY):
+
+  getMaskInfo(mask)
+
+  mask2 = np.zeros(mask.shape[:2], dtype="uint8")
+  mask3 = np.zeros(image.shape[:2], dtype="uint8")
+
+  mask2[mask < 0.15] = 0
+  mask2[mask >= 0.15] = 2
+  mask2[mask >= 0.45] = 3
+  mask2[mask >= 0.85] = 1
+
+  getDistribution(mask2, "mask2 2")
+
+#  mask3[startY:endY, startX:endX] = mask2
+
+  fgModel = np.zeros((1, 65), dtype="float")
+  bgModel = np.zeros((1, 65), dtype="float")
+
+  rect = (startX, endY, endX, startY)
+
+  cloneRegion = image[startY:endY, startX:endX, 0:3].copy()
+
+  print(f"mask2 = {mask2.shape}")
+  print(f"cloneRegion = {cloneRegion.shape}")
+
+  print(f"startX = {startX}, startY = {startY}, endX = {endX}, endY = {endY}")
+
+  # beginning if grabcut rectangle
+
+  #rect = (startY,startX,endY,endX)
+  #(mask3, bgModel, fgModel) = cv.grabCut(image, mask3, rect, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_RECT)
+  #visMask = mask4[startY:endY, startX:endX].copy()
+
+  # end - if grabcut rectangle
+
+#  (mask3, bgModel, fgModel) = cv.grabCut(cloneRegion, mask2, None, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_MASK)
+
+  rect = (startY,startX,endY,endX)
+  (mask2, bgModel, fgModel) = cv.grabCut(cloneRegion, mask2, None, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_MASK)
+
+#  mask2 = mask3[startY:endY, startX:endX]
+
+#  getDistribution(mask3, "mask3")
+  getDistribution(mask2, "mask2")
+
+  return mask2
+
+def getMaskInfo(image):
+
+  unique = np.unique(image, return_counts=False)
+
+  print(f"mask unique length = {len(unique)} image = {image.shape}")
+
+  return
+
+
+def getDistribution(image, aString):
+
+  (unique, counts) = np.unique(image, return_counts=True)
+
+  print(f"{aString} unique = {unique} counts = {counts}")
+
+  return
 
 
 def getEdgeMask(image, mask, startX, startY, endX, endY):
 
-  mask = (mask > 0.3)
+  mask = (mask > 0.5)
+
   visMask = (mask * 255).astype("uint8")
 
   cloneRegion = image[startY:endY, startX:endX, 0:3].copy()
-  cloneReturn = kMeansBGR(cloneRegion, mask)
+  cloneRegion2 = cloneRegion.copy()
 
-  return cloneReturn
+  imageRegionCopy = image[startY:endY, startX:endX, 0:3].copy()
+
+#  cloneReturn = kMeansBGR(cloneRegion, mask)
+
+  cloneRegion2 = kMeansGrayscale(cloneRegion2, mask)
+
+  cloneRegion = kMeansHSV(cloneRegion)
+  bilateralFilterGrayImage = bilateralFilterGray(cloneRegion, True) #cloneReturn if kMeans
+
+#  equalized_gray = cv.equalizeHist(visMask)
+#  gray_filtered = cv.bilateralFilter(equalized_gray, 7, 50, 50)
+#  edges_filtered = cv.Canny(visMask, 60, 120)
+#  cloneReturn2 = bilateralFilter(visMask)
+
+  cloneRegion.fill(0)
+
+  ret, thresh = cv.threshold(visMask, 127, 255, 0)
+  contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+  contoursImage = cv.drawContours( cloneRegion, contours, -1, (255,255,255), 3)
+  contoursGray = cv.cvtColor(contoursImage, cv.COLOR_BGR2GRAY)
+
+#  contoursGray += cloneReturn2
+  contoursGray = getEnhancedEdges(imageRegionCopy, contoursGray, bilateralFilterGrayImage)
+
+  return cloneRegion2 #contoursGray
+
+
+def getEnhancedEdges(image, contoursGray, cloneReturn2):
+
+  contoursGray += cloneReturn2
+
+  return contoursGray
 
 
 def kMeansBGR(image, mask):
@@ -128,15 +287,144 @@ def kMeansBGR(image, mask):
   K = 8
   ret,label,center=cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_PP_CENTERS)
 
-  print(f"center = {center}")
+#  print(f"center = {center}")
   print(f"label shape = {label.shape}")
 
   # Now convert back into uint8, and make original image
 
 
-#  center = np.uint8(center)
-#  res = center[label.flatten()]
-#  res2 = res.reshape((img.shape))
+  center = np.uint8(center)
+  res = center[label.flatten()]
+  res2 = res.reshape((img.shape))
+
+#  label[label == 0] = 8
+#  unique, counts = np.unique(label, return_counts=True)
+#  print(f"unique = {unique}")
+#  print(f"counts = {counts}")
+
+#  (H, W) = image.shape[:2]
+
+#  maskLabel = label.copy()
+#  mask = (mask > 0.3)
+
+#  maskLabel = np.multiply(mask, np.reshape(maskLabel, (H, W)))
+
+#  unique2, counts2 = np.unique(maskLabel, return_counts=True)
+#  print(f"unique2 = {unique2}")
+#  print(f"counts2 = {counts2}")
+
+#  res2 = np.reshape(label.copy(), (H, W))
+#  mask2 = np.zeros((H, W))
+
+#  for i in range(8):
+#    res3 = label.copy()
+#    res3 = (res3 == i)
+
+#    res3 = np.reshape(res3, (H, W))
+#    res3.astype("uint8")
+#    ures = cv.UMat(np.array(res3, dtype=np.uint8))
+
+#    print(f"res3 shape {res3.shape}")
+#    output = cv.connectedComponentsWithStats(ures, connectivity=4)
+
+#    num_labels = output[0]
+#    labels = output[1]
+#    stats = output[2]
+#    centroids = output[3]
+
+#    centroid_array = cv.UMat.get(centroids)
+#    labels_array = cv.UMat.get(labels)
+
+#    print(f"labels_array shape = {labels_array.shape}")
+
+#    print(f"In {i}, components = {num_labels} ")
+#    count = 0
+#    for j in range(1, num_labels):
+#      centroidXY = centroid_array[j]
+#      centroidX = int(centroidXY[0] + 0.5)
+#      centroidY = int(centroidXY[1] + 0.5)
+
+#      if mask[centroidY, centroidX] != 0:
+#        mask2 += (labels_array == j)
+#        count += 1
+
+#    print(f"In num_labels = {num_labels} count = {count}")
+ #   unique3, counts3 = np.unique(mask2, return_counts=True)
+#    print(f"unique3 = {unique3}")
+#    print(f"counts3 = {counts3}")
+
+
+#  visMask = (mask * 255).astype("uint8")
+
+#  for i in range(8):
+#    if(counts2[i+1]/counts[i] > 0.5):
+#      res2[res2 == (i +1)] = 255
+#    else:
+#      res2[res2 == (i+1)] = 0
+
+
+#  res2 = np.reshape(label, (H, W))
+#  res2[res2 == 0] = 8
+#  res2[res2 > 3] = 255
+#  res2[res2 <= 3] = 0
+
+#  print(f"res2 reshape = {res2.shape}")
+
+#  unique, counts = np.unique(label, return_counts=True)
+#  print(f"unique = {unique}")
+#  print(f"counts = {counts}")
+
+  return res2
+
+
+def kMeansHSV(image):
+
+  img = image.copy()
+#  img = resizeImage(img, 300)
+  lab_image = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+
+  Z = lab_image.reshape((-1,3))
+  # convert to np.float32
+  Z = np.float32(Z)
+  # define criteria, number of clusters(K) and apply kmeans()
+  criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+  K = 8
+  ret,label,center=cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_PP_CENTERS)
+  # Now convert back into uint8, and make original image
+
+  center = np.uint8(center)
+  res = center[label.flatten()]
+  res2 = res.reshape((image.shape))
+
+  return res2
+
+
+def kMeansGrayscale(image, mask):
+
+  img = image.copy()
+#  img = resizeImage(img, 300)
+  gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+  equalized_gray = cv.equalizeHist(gray)
+  gray_filtered = cv.bilateralFilter(equalized_gray, 7, 50, 50)
+
+  print(f"grayscale_image = {gray_filtered.shape}")
+
+  Z = gray_filtered.reshape((-1,1))
+
+  print(f"Z = {Z.shape}")
+
+  Z = np.float32(Z)
+
+  # define criteria, number of clusters(K) and apply kmeans()
+  criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+  K = 8
+  ret,label,center=cv.kmeans( Z, K,None,criteria,10,cv.KMEANS_PP_CENTERS)
+  # Now convert back into uint8, and make original image
+
+#  print(f"center = {center}")
+  print(f"label shape = {label.shape}")
+
+  # Now convert back into uint8, and make original image
 
   label[label == 0] = 8
   unique, counts = np.unique(label, return_counts=True)
@@ -146,9 +434,10 @@ def kMeansBGR(image, mask):
   (H, W) = image.shape[:2]
 
   maskLabel = label.copy()
-  mask = (mask > 0.3)
+  maskGreater = (mask > 0.5)
+  maskLesser = (mask < 0.3)
 
-  maskLabel = np.multiply(mask, np.reshape(maskLabel, (H, W)))
+  maskLabel = np.multiply(maskGreater, np.reshape(maskLabel, (H, W)))
 
   unique2, counts2 = np.unique(maskLabel, return_counts=True)
   print(f"unique2 = {unique2}")
@@ -158,57 +447,28 @@ def kMeansBGR(image, mask):
 
   for i in range(8):
     if(counts2[i+1]/counts[i] > 0.5):
-      res2[res2 == (i +1)] = 255
+      res2[res2 == (i +1)] = 1
     else:
       res2[res2 == (i+1)] = 0
 
+  res3 = np.logical_or(res2, maskGreater)
+  res3 = (255*res3).astype("uint")
 
-#  res2 = np.reshape(label, (H, W))
-#  res2[res2 == 0] = 8
-#  res2[res2 > 3] = 255
-#  res2[res2 <= 3] = 0
-
-  print(f"res2 reshape = {res2.shape}")
-
-#  unique, counts = np.unique(label, return_counts=True)
-#  print(f"unique = {unique}")
-#  print(f"counts = {counts}")
-
-  return res2
+  return res3
 
 
-def kMeansLAB(image):
-
-  img = image.copy()
-  img = resizeImage(img, 300)
-  lab_image = cv.cvtColor(img, cv.COLOR_BGR2LAB)
-
-  Z = lab_image.reshape((-1,3))
-  # convert to np.float32
-  Z = np.float32(Z)
-  # define criteria, number of clusters(K) and apply kmeans()
-  criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-  K = 8
-  ret,label,center=cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_RANDOM_CENTERS)
-  # Now convert back into uint8, and make original image
-  center = np.uint8(center)
-  res = center[label.flatten()]
-  res2 = res.reshape((img.shape))
-
-  return res2
-
-
-
-def bilateralFilter(image):
+def bilateralFilterGray(image, shouldReturnCannyFilter):
 
   gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-#  edges = cv.Canny(gray, 60, 120)
   equalized_gray = cv.equalizeHist(gray)
 
   gray_filtered = cv.bilateralFilter(equalized_gray, 7, 50, 50)
   edges_filtered = cv.Canny(gray_filtered, 60, 120)
 
-  return edges_filtered
+  if shouldReturnCannyFilter:
+    return edges_filtered
+  else:
+    return gray_filtered
 
 
 # Run the DNN Model against the imported image (image)
@@ -284,7 +544,6 @@ def rekognizitionShowBoxandLabels(image, labels, borderColor, showLabel, showCon
   height = image.shape[0]
   width = image.shape[1]
   penSize = getImagePenSize(image)
-#  print(f"width = {width} height = {height}")
 
   for label in labels:
     instances = label.get('Instances')
