@@ -14,7 +14,7 @@ Serverless removal of images backgrounds with OpenCV, using an AWS Lambda.
 
 This will bring you to either the Cloudformation UI or the AWS console if you are not signed in. Sign in, if you are not already. From the Cloudformation UI, click "Next" at the bottom of the screen. Repeat clicking "Next" on the two following pages. You will reach a page with this towards the bottom:
 
-![CloudFormation Shot](/read-me-images/CloudFormationShot.png?raw=true)
+![CloudFormation Shot](/readme-images/CloudFormationShot.png?raw=true)
 
 &nbsp;
 
