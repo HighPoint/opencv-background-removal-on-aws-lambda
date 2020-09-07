@@ -115,6 +115,8 @@ def getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY):
   return mask2
 
 
+# Helper Print Function
+
 def getDistribution(image, aString):
 
   (unique, counts) = np.unique(image, return_counts=True)
