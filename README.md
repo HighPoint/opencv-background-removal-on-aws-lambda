@@ -27,7 +27,7 @@ Sample Dog Image Input:
 
 Sample Dog Image Output:
 
-![Dogs with background removed](/readme-images/DogOutput.jpg?raw=true)
+![Dogs with background removed](/readme-images/DogOutput.png?raw=true)
 
 # How to Use
 
