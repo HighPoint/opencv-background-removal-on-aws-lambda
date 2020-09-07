@@ -254,92 +254,12 @@ def kMeansBGR(image, mask):
   K = 8
   ret,label,center=cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_PP_CENTERS)
 
-#  print(f"center = {center}")
-  print(f"label shape = {label.shape}")
 
   # Now convert back into uint8, and make original image
-
 
   center = np.uint8(center)
   res = center[label.flatten()]
   res2 = res.reshape((img.shape))
-
-#  label[label == 0] = 8
-#  unique, counts = np.unique(label, return_counts=True)
-#  print(f"unique = {unique}")
-#  print(f"counts = {counts}")
-
-#  (H, W) = image.shape[:2]
-
-#  maskLabel = label.copy()
-#  mask = (mask > 0.3)
-
-#  maskLabel = np.multiply(mask, np.reshape(maskLabel, (H, W)))
-
-#  unique2, counts2 = np.unique(maskLabel, return_counts=True)
-#  print(f"unique2 = {unique2}")
-#  print(f"counts2 = {counts2}")
-
-#  res2 = np.reshape(label.copy(), (H, W))
-#  mask2 = np.zeros((H, W))
-
-#  for i in range(8):
-#    res3 = label.copy()
-#    res3 = (res3 == i)
-
-#    res3 = np.reshape(res3, (H, W))
-#    res3.astype("uint8")
-#    ures = cv.UMat(np.array(res3, dtype=np.uint8))
-
-#    print(f"res3 shape {res3.shape}")
-#    output = cv.connectedComponentsWithStats(ures, connectivity=4)
-
-#    num_labels = output[0]
-#    labels = output[1]
-#    stats = output[2]
-#    centroids = output[3]
-
-#    centroid_array = cv.UMat.get(centroids)
-#    labels_array = cv.UMat.get(labels)
-
-#    print(f"labels_array shape = {labels_array.shape}")
-
-#    print(f"In {i}, components = {num_labels} ")
-#    count = 0
-#    for j in range(1, num_labels):
-#      centroidXY = centroid_array[j]
-#      centroidX = int(centroidXY[0] + 0.5)
-#      centroidY = int(centroidXY[1] + 0.5)
-
-#      if mask[centroidY, centroidX] != 0:
-#        mask2 += (labels_array == j)
-#        count += 1
-
-#    print(f"In num_labels = {num_labels} count = {count}")
- #   unique3, counts3 = np.unique(mask2, return_counts=True)
-#    print(f"unique3 = {unique3}")
-#    print(f"counts3 = {counts3}")
-
-
-#  visMask = (mask * 255).astype("uint8")
-
-#  for i in range(8):
-#    if(counts2[i+1]/counts[i] > 0.5):
-#      res2[res2 == (i +1)] = 255
-#    else:
-#      res2[res2 == (i+1)] = 0
-
-
-#  res2 = np.reshape(label, (H, W))
-#  res2[res2 == 0] = 8
-#  res2[res2 > 3] = 255
-#  res2[res2 <= 3] = 0
-
-#  print(f"res2 reshape = {res2.shape}")
-
-#  unique, counts = np.unique(label, return_counts=True)
-#  print(f"unique = {unique}")
-#  print(f"counts = {counts}")
 
   return res2
 
@@ -443,8 +363,6 @@ def bilateralFilterGray(image, shouldReturnCannyFilter):
 
 def dnnModel(image, maxLabels, minConfidence):
 
-#  (H, W) = image.shape[:2]
-
   cvNet = cv.dnn.readNetFromTensorflow('/opt/frozen_inference_graph.pb', '/opt/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt')
 
   cvNet.setInput(cv.dnn.blobFromImage(image, size=(300, 300), swapRB=True, crop=False))
@@ -452,38 +370,6 @@ def dnnModel(image, maxLabels, minConfidence):
   (dnnModelResponse, masks) = cvNet.forward(["detection_out_final", "detection_masks"])
 
   return (dnnModelResponse, masks)
-
-
-
-# Show DNN Bounding Box and Optional Labels
-
-def dnnShowBoxandLabels(cvOut, image, maxLabels, minConfidence, showLabel, showConfidence):
-
-  rows = image.shape[0]
-  cols = image.shape[1]
-
-  COCO_model_list = getCOCOModelList()
-
-  for detection in cvOut[0,0,:,:]:
-    penSize = getImagePenSize(image)
-    aConfidence = float(detection[2])
-
-    if aConfidence >= minConfidence:
-      aName = getCOCOModelName(COCO_model_list, int(detection[1]))
-
-      left = detection[3] * cols
-      top = detection[4] * rows
-      right = detection[5] * cols
-      bottom = detection[6] * rows
-      cv.rectangle(image, (int(left), int(top)), (int(right), int(bottom)), (255, 255, 255), thickness=2*penSize)
-
-      if showLabel or showConfidence:
-        writeString = labelString(aName, aConfidence*100, showLabel, showConfidence)
-        cv.putText(image, writeString, (int(left), int(top) - 5), cv.FONT_HERSHEY_SIMPLEX,
-			      0.5*penSize, (255, 255, 255), 2*penSize)
-
-  return image
-
 
 
 # The DNN uses the COCO Model labels
@@ -510,8 +396,7 @@ def getCOCOModelName(COCO_model_list, aClass):
   return string[:-1]
 
 # Resize the Image to the correct size.
-# The DNN uses Faster_RCNN_Inception_v2. This model is limited to 300 x 300.
-# AWS Rekognition is limited to 5MB images.
+# The DNN uses Mask_RCNN. This model is limited to 300 x 300.
 
 def resizeImage(image, maxSize):
   height = image.shape[0]
@@ -574,7 +459,6 @@ def returnJSON(image):
       },
       "body":   encoded_image
     }
-
 
 
 # readImageDataString
