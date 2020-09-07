@@ -9,14 +9,13 @@ def lambda_handler(event, context):
 
   print(listdir("/opt/"))
   (imageDataString, showDetectObject, showAWSRekognition,
-    showLabel, showConfidence,
     minConfidence, maxLabels) = loadInitialParameters(event)
 
   if imageDataString != "":
     image, grayImage = readImageDataString(imageDataString)
 
     image = processImage(image, grayImage, showDetectObject, showAWSRekognition,
-                  maxLabels, minConfidence, showLabel, showConfidence)
+                  maxLabels, minConfidence)
 
     return returnJSON(image)
   else:
@@ -26,7 +25,7 @@ def lambda_handler(event, context):
 # processImage
 
 def processImage(image, grayImage, showDetectObject, showAWSRekognition,
-                  maxLabels, minConfidence, showLabel, showConfidence):
+                  maxLabels, minConfidence):
 
   if showDetectObject:
     (dnnModelResponse, masks) = dnnModel(image, maxLabels, minConfidence)
@@ -202,13 +201,11 @@ def loadInitialParameters(dict):
     imageDataString = dict.get('imageData',"")
     showDetectObject = dict.get('detectObject', True)
     showAWSRekognition = dict.get('awsRekognition', False)
-    showLabel = dict.get('showLabel', True)
-    showConfidence = dict.get('showConfidence', True)
     minConfidence = float(dict.get('confidenceLevel', "70"))/100
 
     maxLabels = 10
 
-    return imageDataString, showDetectObject, showAWSRekognition, showLabel, showConfidence, minConfidence, maxLabels
+    return imageDataString, showDetectObject, showAWSRekognition, minConfidence, maxLabels
 
 
 # the return JSON
