@@ -24,7 +24,7 @@ Checkmark the three "I acknowledgement" statements and select "Create Stack." Th
 
 2) Navigate to S3. You should see a bucket named "mask-rcnn-demo-xxxxxxxx", where "xxxxxxxx" is the unique stack identifier from CloudFormation. Open this bucket. You will see an "index.html" file. Open this file. This webpage will appear:
 
-![OpenCV Object Detection Screen Shot](read-me-images/OpenCVScreenShot.png?raw=true)
+![OpenCV Object Detection Screen Shot](read-me-images/BackgroundRemovalShot.png?raw=true)
 
 &nbsp;
 
