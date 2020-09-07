@@ -205,7 +205,7 @@ def loadInitialParameters(dict):
     imageDataString = dict.get('imageData',"")
     showDogs = dict.get('showDogs', True)
     showPeople = dict.get('showPeople', True)
-    showAllCOCO = dict.get('showAll', False)
+    showAllCOCO = dict.get('showAllCOCO', False)
     minConfidence = float(dict.get('confidenceLevel', "70"))/100
 
     maxLabels = 10
