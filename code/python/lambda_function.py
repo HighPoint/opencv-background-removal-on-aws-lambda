@@ -13,8 +13,9 @@ def lambda_handler(event, context):
   if imageDataString != "":
     image, grayImage = readImageDataString(imageDataString)
 
-    image = processImage(image, grayImage, showDetectObject, showAWSRekognition,
+    image = processImage(image, grayImage, showPeople, showDogs, showAllCOCO,
                   maxLabels, minConfidence)
+
 
     return returnJSON(image)
   else:
@@ -23,18 +24,19 @@ def lambda_handler(event, context):
 
 # processImage
 
-def processImage(image, grayImage, showDetectObject, showAWSRekognition,
+def processImage(image, grayImage, showPeople, showDogs, showAllCOCO,
                   maxLabels, minConfidence):
 
-  if showDetectObject:
-    (dnnModelResponse, masks) = dnnModel(image, maxLabels, minConfidence)
-    image = dnnShowMask(dnnModelResponse, masks, image, maxLabels, minConfidence)
+
+  (dnnModelResponse, masks) = dnnModel(image, maxLabels, minConfidence)
+  image = dnnShowMask(dnnModelResponse, masks, image, maxLabels, minConfidence,
+                        showPeople, showDogs, showAllCOCO)
 
   return image
 
 # Show DNN Mask
 
-def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
+def dnnShowMask(boxes, masks, image, maxLabels, minConfidence, showPeople, showDogs, showAllCOCO):
 
   (H, W) = image.shape[:2]
 
@@ -48,7 +50,13 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
     classID = int(detection[1])
     confidence = float(detection[2])
 
-    if confidence > minConfidence:
+    if (  (confidence > minConfidence) and
+          (showAllCOCO or
+          (showDogs and (classID == 17)) or
+          (showPeople and (classID == 0))  )):
+
+      print(f"classID = {classID}")
+      print(f"showAllCOCO = {showAllCOCO}, showPeople = {showPeople}, showDogs = {showDogs}")
 
       box = detection[3:7] * np.array([W, H, W, H])
       (startX, startY, endX, endY) = box.astype("int")
@@ -200,7 +208,7 @@ def loadInitialParameters(dict):
     imageDataString = dict.get('imageData',"")
     showDogs = dict.get('showDogs', True)
     showPeople = dict.get('showPeople', True)
-    showAllCOCO = dict.get('showAllCOCO', False)
+    showAllCOCO = dict.get('showAll', False)
     minConfidence = float(dict.get('confidenceLevel', "70"))/100
 
     maxLabels = 10
