@@ -32,19 +32,6 @@ def processImage(image, grayImage, showDetectObject, showAWSRekognition,
     (dnnModelResponse, masks) = dnnModel(image, maxLabels, minConfidence)
     image = dnnShowMask(dnnModelResponse, masks, image, maxLabels, minConfidence)
 
-#    image = dnnShowBoxandLabels(dnnModelResponse, image, maxLabels, minConfidence, showLabel, showConfidence)
-#    image = kMeansBGR(image)
-#    image = bilateralFilter(image)
-#    image = kMeansLAB(image)
-#    image = bilateralFilter(image)
-
-
-#  if showAWSRekognition:
-#    f = open("/tmp/photo.jpg","rb")
-#    rekognitionLabels = detectObjectRekognition(f.read(), maxLabels, minConfidence)
-#    image = rekognizitionShowBoxandLabels(image, rekognitionLabels, (0,0,0), showLabel, showConfidence)
-
-
   return image
 
 # Show DNN Mask
@@ -64,7 +51,7 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
     confidence = float(detection[2])
 
     if confidence > minConfidence:
-      print(detection)
+#      print(detection)
 
       box = detection[3:7] * np.array([W, H, W, H])
       (startX, startY, endX, endY) = box.astype("int")
@@ -73,31 +60,13 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
 
       mask = masks[i -1, classID]
       mask = cv.resize(mask, (boxW, boxH), interpolation=cv.INTER_LANCZOS4) #cv.INTER_CUBIC
-#      mask = (mask > 0.3) #Threshold
-
-      print(f"Mask = {mask.shape}")
-      print(f"Image = {image.shape}")
-
-#      roi = image[startY:endY, startX:endX]
-#      roi = clone[startY:endY, startX:endX]
-
-#      visMask = (mask * 255).astype("uint8")
 
       visMask = getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY)
       visMask = np.where((visMask==2)|(visMask==0),0,255).astype('uint8')
 
-#      instance = cv.bitwise_and(roi, roi, mask=visMask)
-
-#      roi = roi[mask]
-
-#      color = 100
-#      blended = ((0.0 * color) + (1.0 * roi)).astype("uint8")
-
-#      clone[startY:endY, startX:endX][mask] = blended
-
       clone[startY:endY, startX:endX, 3] = np.where((visMask == 255) | (clone[startY:endY, startX:endX, 3]==255), 255, 0).astype('uint8')
 
-      print(clone.shape)
+#      print(clone.shape)
 
   clone = smoothImageEdges(clone)
 
@@ -109,8 +78,6 @@ def smoothImageEdges(image):
   closing = cv.morphologyEx(image[:,:,3], cv.MORPH_CLOSE, kernel)
 
   image[:,:,3] = closing.astype("int")
-
-#  getDistribution(closing.astype("int"), "Morph Closing")
 
   blur = cv.GaussianBlur( image[:,:,3],(9,9),0)
 
