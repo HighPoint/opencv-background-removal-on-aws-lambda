@@ -68,6 +68,12 @@ If you select the "Object Mask Options", you can control which object classes ar
 
 &nbsp;
 
+# Output File
+
+OpenCV Background Removal on AWS Lambda returns a 32 bit png file. The png alpha channel is marked either transparent as 0 or visible as 255. The original image is stored in the RGB channels of the png file. This means you can restore sections of image by editing the alpha channel.
+
+&nbsp;
+
 # Questions
 
 Any questions or suggestions, just add an "Issues" submission to this repository. Thanks.
