@@ -69,6 +69,9 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
 
   return clone
 
+
+# Smooth Image Edges
+
 def smoothImageEdges(image):
 
   kernel = kernel = np.ones((9,9),np.uint8)
@@ -82,7 +85,7 @@ def smoothImageEdges(image):
 
   return image
 
-
+#
 def getGrabCutMaskWholeImage(image, mask, startX, startY, endX, endY):
 
   mask2 = np.zeros(mask.shape[:2], dtype="uint8")
@@ -93,8 +96,6 @@ def getGrabCutMaskWholeImage(image, mask, startX, startY, endX, endY):
   mask2[mask >= 0.5] = 3
   mask2[mask >= 0.85] = 1
 
-  getDistribution(mask2, "mask2 2")
-
   mask3[startY:endY, startX:endX] = mask2
 
   fgModel = np.zeros((1, 65), dtype="float")
@@ -104,24 +105,16 @@ def getGrabCutMaskWholeImage(image, mask, startX, startY, endX, endY):
 
   cloneRegion = image[startY:endY, startX:endX, 0:3].copy()
 
-  print(f"mask2 = {mask2.shape}")
-  print(f"cloneRegion = {cloneRegion.shape}")
-
-  print(f"startX = {startX}, startY = {startY}, endX = {endX}, endY = {endY}")
-
   rect = (startY,startX,endY,endX)
   (mask3, bgModel, fgModel) = cv.grabCut(image, mask3, rect, bgModel, fgModel, 10, mode=cv.GC_INIT_WITH_MASK)
 
   mask2 = mask3[startY:endY, startX:endX]
 
-  getDistribution(mask3, "mask3")
-  getDistribution(mask2, "mask2")
-
   return mask2
+
 
 def getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY):
 
-  getMaskInfo(mask)
 
   mask2 = np.zeros(mask.shape[:2], dtype="uint8")
   mask3 = np.zeros(image.shape[:2], dtype="uint8")
@@ -131,7 +124,7 @@ def getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY):
   mask2[mask >= 0.45] = 3
   mask2[mask >= 0.85] = 1
 
-  getDistribution(mask2, "mask2 2")
+#  getDistribution(mask2, "mask2 2")
 
   fgModel = np.zeros((1, 65), dtype="float")
   bgModel = np.zeros((1, 65), dtype="float")
@@ -140,25 +133,12 @@ def getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY):
 
   cloneRegion = image[startY:endY, startX:endX, 0:3].copy()
 
-  print(f"mask2 = {mask2.shape}")
-  print(f"cloneRegion = {cloneRegion.shape}")
-
-  print(f"startX = {startX}, startY = {startY}, endX = {endX}, endY = {endY}")
-
   rect = (startY,startX,endY,endX)
   (mask2, bgModel, fgModel) = cv.grabCut(cloneRegion, mask2, None, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_MASK)
 
   getDistribution(mask2, "mask2")
 
   return mask2
-
-def getMaskInfo(image):
-
-  unique = np.unique(image, return_counts=False)
-
-  print(f"mask unique length = {len(unique)} image = {image.shape}")
-
-  return
 
 
 def getDistribution(image, aString):
