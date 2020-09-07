@@ -15,7 +15,7 @@ Sample Human Image Output:
 
 OpenCV Background Removal on AWS Lambda uses a three step method to remove the background. 
 
-First, the lambda uses OpenCV's deep neural network (DNN) to identify areas of interest in the image. These areas are given as probability of being part of an object, a person or a dog for example. This results in a highly pixelated image if viewed.
+First, the python lambda function uses OpenCV's deep neural network (DNN) to identify areas of interest in the image. These areas are given as probability of being part of an object, a person or a dog for example. This results in a highly pixelated image if viewed.
 
 Second, the area probabilities are inputed into the OpenCV GrabCut algorithm. GrabCut looks for edges to make more realistic cuts between the object and the background.
 
