@@ -18,7 +18,7 @@ This will bring you to either the Cloudformation UI or the AWS console if you ar
 
 &nbsp;
 
-Checkmark the three "I acknowledgement" statements and select "Create Stack." This will start building the CloudFormation stack.
+Checkmark the three "I acknowledgement" statements and select "Create Stack." This will start building the CloudFormation stack. It may take several minutes for CloudFormation to finish.
 
 &nbsp;
 
