@@ -5,6 +5,28 @@
 
 Serverless removal of images backgrounds with OpenCV, using an AWS Lambda.
 
+Sample Human Image Input:
+
+![One women](/readme-images/FaceInput.jpg?raw=true)
+
+Sample Human Image Output:
+
+![One women with background removed](/readme-images/FaceOutput.jpg?raw=true)
+
+OpenCV Object Detection on AWS Lambda places black bounding boxes around the humans found by AWS Rekognition. The 99.7 is AWS Rekognition's confidence level that this is a person. 
+
+The white bounding boxes around the humans is from OpenCV's Deep Neural Network (DNN). The DNN, in this project, uses the "Faster RCNN Inception Version 2" model. However, you can use any OpenCV DNN compatible model you'd like. This DNN model shows a slightly lower confidence for the humans at 98.5 and 92.2.
+
+The blue bounding boxes shows the OpenCV Haar Cascade for faces. This is an older technology, and not nearly as accurate as neural networks for image detection. The Haar Cascades work best if the picture is already known to contain faces, or dogs, or cats. 
+
+Sample Dog Image Input:
+
+![Two dogs](/readme-images/DogInput.jpg?raw=true)
+
+Sample Dog Image Output:
+
+![Dogs with background removed](/readme-images/DogOutput.jpg?raw=true)
+
 # How to Use
 
 1. Click the "Image Background Removal Launch Stack" button:
