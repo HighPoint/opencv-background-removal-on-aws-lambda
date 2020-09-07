@@ -7,8 +7,7 @@ import numpy as np
 
 def lambda_handler(event, context):
 
-  print(listdir("/opt/"))
-  (imageDataString, showDetectObject, showAWSRekognition,
+  (imageDataString, showPeople, showDogs, showAllCOCO,
     minConfidence, maxLabels) = loadInitialParameters(event)
 
   if imageDataString != "":
@@ -199,13 +198,14 @@ def convertImageToBase64(image):
 def loadInitialParameters(dict):
 
     imageDataString = dict.get('imageData',"")
-    showDetectObject = dict.get('detectObject', True)
-    showAWSRekognition = dict.get('awsRekognition', False)
+    showDogs = dict.get('showDogs', True)
+    showPeople = dict.get('showPeople', True)
+    showAllCOCO = dict.get('showAllCOCO', False)
     minConfidence = float(dict.get('confidenceLevel', "70"))/100
 
     maxLabels = 10
 
-    return imageDataString, showDetectObject, showAWSRekognition, minConfidence, maxLabels
+    return imageDataString, showPeople, showDogs, showAllCOCO, minConfidence, maxLabels
 
 
 # the return JSON
