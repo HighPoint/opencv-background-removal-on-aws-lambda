@@ -51,7 +51,6 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
     confidence = float(detection[2])
 
     if confidence > minConfidence:
-#      print(detection)
 
       box = detection[3:7] * np.array([W, H, W, H])
       (startX, startY, endX, endY) = box.astype("int")
@@ -65,8 +64,6 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence):
       visMask = np.where((visMask==2)|(visMask==0),0,255).astype('uint8')
 
       clone[startY:endY, startX:endX, 3] = np.where((visMask == 255) | (clone[startY:endY, startX:endX, 3]==255), 255, 0).astype('uint8')
-
-#      print(clone.shape)
 
   clone = smoothImageEdges(clone)
 
@@ -112,16 +109,6 @@ def getGrabCutMaskWholeImage(image, mask, startX, startY, endX, endY):
 
   print(f"startX = {startX}, startY = {startY}, endX = {endX}, endY = {endY}")
 
-  # beginning if grabcut rectangle
-
-  #rect = (startY,startX,endY,endX)
-  #(mask3, bgModel, fgModel) = cv.grabCut(image, mask3, rect, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_RECT)
-  #visMask = mask4[startY:endY, startX:endX].copy()
-
-  # end - if grabcut rectangle
-
-#  (mask3, bgModel, fgModel) = cv.grabCut(cloneRegion, mask2, None, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_MASK)
-
   rect = (startY,startX,endY,endX)
   (mask3, bgModel, fgModel) = cv.grabCut(image, mask3, rect, bgModel, fgModel, 10, mode=cv.GC_INIT_WITH_MASK)
 
@@ -146,8 +133,6 @@ def getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY):
 
   getDistribution(mask2, "mask2 2")
 
-#  mask3[startY:endY, startX:endX] = mask2
-
   fgModel = np.zeros((1, 65), dtype="float")
   bgModel = np.zeros((1, 65), dtype="float")
 
@@ -160,22 +145,9 @@ def getGrabCutMaskPartImage(image, mask, startX, startY, endX, endY):
 
   print(f"startX = {startX}, startY = {startY}, endX = {endX}, endY = {endY}")
 
-  # beginning if grabcut rectangle
-
-  #rect = (startY,startX,endY,endX)
-  #(mask3, bgModel, fgModel) = cv.grabCut(image, mask3, rect, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_RECT)
-  #visMask = mask4[startY:endY, startX:endX].copy()
-
-  # end - if grabcut rectangle
-
-#  (mask3, bgModel, fgModel) = cv.grabCut(cloneRegion, mask2, None, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_MASK)
-
   rect = (startY,startX,endY,endX)
   (mask2, bgModel, fgModel) = cv.grabCut(cloneRegion, mask2, None, bgModel, fgModel, 5, mode=cv.GC_INIT_WITH_MASK)
 
-#  mask2 = mask3[startY:endY, startX:endX]
-
-#  getDistribution(mask3, "mask3")
   getDistribution(mask2, "mask2")
 
   return mask2
@@ -196,166 +168,6 @@ def getDistribution(image, aString):
   print(f"{aString} unique = {unique} counts = {counts}")
 
   return
-
-
-def getEdgeMask(image, mask, startX, startY, endX, endY):
-
-  mask = (mask > 0.5)
-
-  visMask = (mask * 255).astype("uint8")
-
-  cloneRegion = image[startY:endY, startX:endX, 0:3].copy()
-  cloneRegion2 = cloneRegion.copy()
-
-  imageRegionCopy = image[startY:endY, startX:endX, 0:3].copy()
-
-#  cloneReturn = kMeansBGR(cloneRegion, mask)
-
-  cloneRegion2 = kMeansGrayscale(cloneRegion2, mask)
-
-  cloneRegion = kMeansHSV(cloneRegion)
-  bilateralFilterGrayImage = bilateralFilterGray(cloneRegion, True) #cloneReturn if kMeans
-
-#  equalized_gray = cv.equalizeHist(visMask)
-#  gray_filtered = cv.bilateralFilter(equalized_gray, 7, 50, 50)
-#  edges_filtered = cv.Canny(visMask, 60, 120)
-#  cloneReturn2 = bilateralFilter(visMask)
-
-  cloneRegion.fill(0)
-
-  ret, thresh = cv.threshold(visMask, 127, 255, 0)
-  contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-  contoursImage = cv.drawContours( cloneRegion, contours, -1, (255,255,255), 3)
-  contoursGray = cv.cvtColor(contoursImage, cv.COLOR_BGR2GRAY)
-
-#  contoursGray += cloneReturn2
-  contoursGray = getEnhancedEdges(imageRegionCopy, contoursGray, bilateralFilterGrayImage)
-
-  return cloneRegion2 #contoursGray
-
-
-def getEnhancedEdges(image, contoursGray, cloneReturn2):
-
-  contoursGray += cloneReturn2
-
-  return contoursGray
-
-
-def kMeansBGR(image, mask):
-
-  img = image.copy()
-#  img = resizeImage(img, 300)
-
-  Z = img.reshape((-1,3))
-  # convert to np.float32
-  Z = np.float32(Z)
-  # define criteria, number of clusters(K) and apply kmeans()
-  criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-  K = 8
-  ret,label,center=cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_PP_CENTERS)
-
-
-  # Now convert back into uint8, and make original image
-
-  center = np.uint8(center)
-  res = center[label.flatten()]
-  res2 = res.reshape((img.shape))
-
-  return res2
-
-
-def kMeansHSV(image):
-
-  img = image.copy()
-#  img = resizeImage(img, 300)
-  lab_image = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-
-  Z = lab_image.reshape((-1,3))
-  # convert to np.float32
-  Z = np.float32(Z)
-  # define criteria, number of clusters(K) and apply kmeans()
-  criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-  K = 8
-  ret,label,center=cv.kmeans(Z,K,None,criteria,10,cv.KMEANS_PP_CENTERS)
-  # Now convert back into uint8, and make original image
-
-  center = np.uint8(center)
-  res = center[label.flatten()]
-  res2 = res.reshape((image.shape))
-
-  return res2
-
-
-def kMeansGrayscale(image, mask):
-
-  img = image.copy()
-#  img = resizeImage(img, 300)
-  gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-  equalized_gray = cv.equalizeHist(gray)
-  gray_filtered = cv.bilateralFilter(equalized_gray, 7, 50, 50)
-
-  print(f"grayscale_image = {gray_filtered.shape}")
-
-  Z = gray_filtered.reshape((-1,1))
-
-  print(f"Z = {Z.shape}")
-
-  Z = np.float32(Z)
-
-  # define criteria, number of clusters(K) and apply kmeans()
-  criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-  K = 8
-  ret,label,center=cv.kmeans( Z, K,None,criteria,10,cv.KMEANS_PP_CENTERS)
-  # Now convert back into uint8, and make original image
-
-#  print(f"center = {center}")
-  print(f"label shape = {label.shape}")
-
-  # Now convert back into uint8, and make original image
-
-  label[label == 0] = 8
-  unique, counts = np.unique(label, return_counts=True)
-  print(f"unique = {unique}")
-  print(f"counts = {counts}")
-
-  (H, W) = image.shape[:2]
-
-  maskLabel = label.copy()
-  maskGreater = (mask > 0.5)
-  maskLesser = (mask < 0.3)
-
-  maskLabel = np.multiply(maskGreater, np.reshape(maskLabel, (H, W)))
-
-  unique2, counts2 = np.unique(maskLabel, return_counts=True)
-  print(f"unique2 = {unique2}")
-  print(f"counts2 = {counts2}")
-
-  res2 = np.reshape(label, (H, W))
-
-  for i in range(8):
-    if(counts2[i+1]/counts[i] > 0.5):
-      res2[res2 == (i +1)] = 1
-    else:
-      res2[res2 == (i+1)] = 0
-
-  res3 = np.logical_or(res2, maskGreater)
-  res3 = (255*res3).astype("uint")
-
-  return res3
-
-
-def bilateralFilterGray(image, shouldReturnCannyFilter):
-
-  gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-  equalized_gray = cv.equalizeHist(gray)
-
-  gray_filtered = cv.bilateralFilter(equalized_gray, 7, 50, 50)
-  edges_filtered = cv.Canny(gray_filtered, 60, 120)
-
-  if shouldReturnCannyFilter:
-    return edges_filtered
-  else:
-    return gray_filtered
 
 
 # Run the DNN Model against the imported image (image)
