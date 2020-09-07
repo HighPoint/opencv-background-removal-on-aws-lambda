@@ -355,16 +355,12 @@
           var showDogsChecked = $("#showDogs").prop("checked");
           var showAllChecked = $("#showAll").prop("checked");
 
-          var detectObjectChecked = $("#detectObjectCheckmark").prop("checked");
-          var awsRekognitionChecked = $("#awsRekognitionCheckmark").prop("checked");
           var confidenceLevel = parseInt($("#confidenceLevelText").val());
 
           var optionURL = JSON.stringify({"imageData":dataURL,
-                                          "detectObject":detectObjectChecked,
-                                          "awsRekognition":awsRekognitionChecked,
                                           "showPeople":showPeopleChecked,
                                           "showDogs":showDogsChecked,
-                                          "showAll":showAllChecked,
+                                          "showAllCOCO":showAllChecked,
                                           "confidenceLevel":confidenceLevel
                                         });
           xhr.send(optionURL);
