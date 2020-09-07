@@ -11,7 +11,7 @@ Sample Human Image Input:
 
 Sample Human Image Output:
 
-![One women with background removed](/readme-images/FaceOutput.jpg?raw=true)
+![One women with background removed](/readme-images/FaceOutput.png?raw=true)
 
 OpenCV Background Removal on AWS Lambda uses a three step method to remove the background. 
 
