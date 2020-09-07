@@ -13,11 +13,13 @@ Sample Human Image Output:
 
 ![One women with background removed](/readme-images/FaceOutput.jpg?raw=true)
 
-OpenCV Object Detection on AWS Lambda places black bounding boxes around the humans found by AWS Rekognition. The 99.7 is AWS Rekognition's confidence level that this is a person. 
+OpenCV Background Removal on AWS Lambda uses a three step method to remove the background. 
 
-The white bounding boxes around the humans is from OpenCV's Deep Neural Network (DNN). The DNN, in this project, uses the "Faster RCNN Inception Version 2" model. However, you can use any OpenCV DNN compatible model you'd like. This DNN model shows a slightly lower confidence for the humans at 98.5 and 92.2.
+First, the lambda uses OpenCV's deep neural network (DNN) to identify areas of interest in the image. These areas are given as probability of being part of an object, a person or a dog for example. This results in a highly pixelated image if viewed.
 
-The blue bounding boxes shows the OpenCV Haar Cascade for faces. This is an older technology, and not nearly as accurate as neural networks for image detection. The Haar Cascades work best if the picture is already known to contain faces, or dogs, or cats. 
+Second, the area probabilities are inputed into the OpenCV GrabCut algorithm. GrabCut looks for edges to make more realistic cuts between the object and the background.
+
+Finally, the image is smoothed using a Gaussian Blur.
 
 Sample Dog Image Input:
 
