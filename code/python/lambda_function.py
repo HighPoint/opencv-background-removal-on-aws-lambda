@@ -55,9 +55,6 @@ def dnnShowMask(boxes, masks, image, maxLabels, minConfidence, showPeople, showD
           (showDogs and (classID == 17)) or
           (showPeople and (classID == 0))  )):
 
-      print(f"classID = {classID}")
-      print(f"showAllCOCO = {showAllCOCO}, showPeople = {showPeople}, showDogs = {showDogs}")
-
       box = detection[3:7] * np.array([W, H, W, H])
       (startX, startY, endX, endY) = box.astype("int")
       boxW = endX - startX
