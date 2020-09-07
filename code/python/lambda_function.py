@@ -485,76 +485,8 @@ def dnnShowBoxandLabels(cvOut, image, maxLabels, minConfidence, showLabel, showC
   return image
 
 
-# Run AWS Rekognition with the image (imageBytes)
 
-def detectObjectRekognition(imageBytes, maxLabels, minConfidence, region="us-east-1"):
-
-  client=boto3.client('rekognition', region)
-
-  response = client.detect_labels(
-    Image= {
-        "Bytes": imageBytes
-    },
-    MaxLabels= maxLabels,
-    MinConfidence= minConfidence*100    #AWS Rekognition uses percentage
-	)
-
-  labels=response['Labels']
-
-  return labels
-
-
-# Show the AWS Rekognizition Bounding Box and Optional Labels
-
-def rekognizitionShowBoxandLabels(image, labels, borderColor, showLabel, showConfidence):
-
-  height = image.shape[0]
-  width = image.shape[1]
-  penSize = getImagePenSize(image)
-
-  for label in labels:
-    instances = label.get('Instances')
-    for boxes in instances:
-      aName = label.get('Name')
-      aConfidence = label.get("Confidence")
-      aBox = boxes.get('BoundingBox')
-
-      aTop = int(aBox.get('Top') * height)
-      aLeft = int(aBox.get('Left') * width)
-      aWidth = int(aBox.get('Width') * width)
-      aHeight = int(aBox.get('Height') * height)
-
-      cv.rectangle(image, (aLeft, aTop), (aLeft + aWidth, aTop + aHeight), borderColor, 2*penSize)
-
-      if showLabel or showConfidence:
-        writeString = labelString(aName, aConfidence, showLabel, showConfidence)
-        cv.putText(image, writeString, (aLeft, aTop - 5), cv.FONT_HERSHEY_SIMPLEX,
-			      0.5*penSize, borderColor, 2*penSize)
-
-  return image
-
-
-
-# Create the Bounding Box Label depending on the showLabel and showConfidence options.
-
-def labelString(labelString, confidenceFloat, showLabel, showConfidence):
-
-  aLabelString = ""
-
-  if showConfidence:
-    confidenceString = str(confidenceFloat)[0:4]
-
-  if showLabel and showConfidence:
-    aLabelString = labelString + " " + confidenceString
-  elif showLabel:
-    aLabelString = labelString
-  elif showConfidence:
-    aLabelString = confidenceString
-
-  return aLabelString
-
-
-# The DNN uses the COCO Model labels for Faster_RCNN_Inception_v2
+# The DNN uses the COCO Model labels
 def getCOCOModelList():
 
   f = open("/var/task/Data/COCO_model_label.txt", "r")
@@ -643,21 +575,6 @@ def returnJSON(image):
       "body":   encoded_image
     }
 
-
-# getImagePenSize
-
-def getImagePenSize(image):
-
-  height = image.shape[0]
-  width = image.shape[1]
-
-  maxDimension = max(height, width)
-
-  penSize = int(maxDimension/640)
-  if penSize == 0:
-    penSize = 1
-
-  return penSize
 
 
 # readImageDataString
