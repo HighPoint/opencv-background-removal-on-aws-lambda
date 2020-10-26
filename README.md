@@ -56,7 +56,7 @@ If you select the "Object Mask Options", you can control which object classes ar
 
 ![OpenCV Background Removal Menu Screen Shot](readme-images/BackgroundRemovalMenuShot.png?raw=true)
 
-&nbsp;
+&nbsp; 
 
 3) Select a photo. Either select one of the stock photos or upload your own image. Select "Detect," if you uploaded an image or changed the image detection options.
 
