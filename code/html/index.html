@@ -364,65 +364,6 @@
           }
       }
 
-
-  /*    $("#clearDrawButton").on("click", function(){
-        if(isClearButton){
-          $("#clearDrawButton").prop("value", "Draw");
-          isClearButton = false;
-        }
-        else{
-          $("#clearDrawButton").prop("value", "Clear");
-          isClearButton = true;
-        }
-      });
-
-      $('#exampleCanvas').mousemove(function(e) {
-        if(clicking == false)
-        {
-          var pos = findPos(this);
-          var x = e.pageX - pos.x;
-          var y = e.pageY - pos.y;
-          var coord = "x=" + x + ", y=" + y;
-          var c = this.getContext('2d');
-          var p = c.getImageData(x, y, 1, 1).data;
-          var rgba = "r = "+p[0]+", g = "+p[1]+", b = "+p[2]+", a = "+p[3];
-          $('#status').html(coord + "<br>" + rgba);
-        }
-        else if(isClearButton == true)
-        {
-          var pos = findPos(this);
-          var x = e.pageX - pos.x;
-          var y = e.pageY - pos.y;
-          var coord = "x=" + x + ", y=" + y;
-          var ctx = this.getContext('2d');
-          ctx.fillStyle = "rgba(255,0,0,0)";
-          ctx.fillRect(0,0,10,10);
-          var imgData = ctx.getImageData(0, 0, 10, 10);
-          ctx.putImageData(imgData, x, y);
-          var p = c.getImageData(x, y, 1, 1).data;
-          var rgba = "r = "+p[0]+", g = "+p[1]+", b = "+p[2]+", a = "+p[3];
-          $('#status').html(coord + "<br>" + rgba);
-        }
-        else {
-          var pos = findPos(this);
-          var x = e.pageX - pos.x;
-          var y = e.pageY - pos.y;
-          var coord = "x=" + x + ", y=" + y;
-          var aCanvas = $("#originalCanvas")[0];
-          var originalCTX = aCanvas.getContext('2d');
-          var ctx = this.getContext('2d');
-          var imgData = originalCTX.getImageData(x, y, 10, 10);
-          ctx.putImageData(imgData, x, y);
-          var p = c.getImageData(x, y, 1, 1).data;
-          var rgba = "r = "+p[0]+", g = "+p[1]+", b = "+p[2]+", a = "+p[3];
-          $('#status').html(coord + "<br>" + rgba);
-        }
-      });
-
-      $('#exampleCanvas').mousedown(function(e) {
-        clicking = true;
-      }); */
-
       $(document).mouseup(function(e){
         clicking = false;
       });
