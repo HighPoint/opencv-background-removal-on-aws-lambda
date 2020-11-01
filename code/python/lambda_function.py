@@ -242,4 +242,4 @@ def readImageDataString(imageDataString):
   image = cv.imread("/tmp/photo.jpg")
   gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
-  return image, gray
+  return image, gray 
