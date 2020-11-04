@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09' 
 Description: OpenCV Mask RCNN running in an AWS Lambda Layer. This also creates an S3 bucket, API Gateway.
 
 Transform: AWS::Serverless-2016-10-31
